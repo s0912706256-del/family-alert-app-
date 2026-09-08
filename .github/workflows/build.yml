@@ -26,7 +26,7 @@ jobs:
           flutter-version: '3.19.x'
 
       - name: Create Flutter Android Project
-        run: flutter create . --platforms=android --org=com.example.familyalert
+        run: flutter create --project-name family_alert_app . --platforms=android --org=com.example.familyalert
 
       - name: Build APK
         run: flutter build apk --release
