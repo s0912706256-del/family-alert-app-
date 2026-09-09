@@ -1,5 +1,5 @@
 name: family_alert_app
-description: "Family Alert App"
+description: "A private family alert broadcast app."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -10,7 +10,11 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_local_notifications: ^17.0.0
-  http: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
