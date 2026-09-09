@@ -25,7 +25,7 @@ jobs:
       - name: Ensure Android Project Exists
         run: |
           if [ ! -d "android" ]; then
-            flutter create --platforms=android --org com.example .
+            flutter create --platforms=android --org com.example --project-name family_alert_app .
           fi
           flutter pub get
 
