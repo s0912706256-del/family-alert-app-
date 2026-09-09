@@ -9,6 +9,7 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 初始化本地通知 Channel
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
   
@@ -18,6 +19,7 @@ void main() async {
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
+  // 建立 Android 高優先級警報頻道 (重要通知)
   const AndroidNotificationChannel urgentChannel = AndroidNotificationChannel(
     'urgent_alert_channel',
     '緊急警報通知',
@@ -26,6 +28,7 @@ void main() async {
     playSound: true,
   );
 
+  // 建立 Android 標準優先級頻道 (一般廣播)
   const AndroidNotificationChannel normalChannel = AndroidNotificationChannel(
     'general_alert_channel',
     '一般家庭廣播',
@@ -79,6 +82,7 @@ class _AlertHomePageState extends State<AlertHomePage> {
     _startUdpListener();
   }
 
+  // 啟動 UDP 監聽
   void _startUdpListener() async {
     try {
       _udpSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 8888);
@@ -97,6 +101,7 @@ class _AlertHomePageState extends State<AlertHomePage> {
     }
   }
 
+  // 解析收到訊息並觸發對應通知頻道
   void _handleIncomingBroadcast(String rawMessage) {
     bool isUrgent = rawMessage.startsWith("[URGENT]");
     String cleanMessage = rawMessage.replaceAll("[URGENT]", "").replaceAll("[NORMAL]", "");
@@ -108,6 +113,7 @@ class _AlertHomePageState extends State<AlertHomePage> {
     }
   }
 
+  // 發送 UDP 廣播封包
   void _sendUdpBroadcast(String message, {bool isUrgent = false}) async {
     try {
       RawDatagramSocket socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
@@ -127,6 +133,7 @@ class _AlertHomePageState extends State<AlertHomePage> {
     }
   }
 
+  // 高優先級通知 (懸浮彈窗 + 警報音效)
   Future<void> _showUrgentNotification(String title, String body) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'urgent_alert_channel',
@@ -140,6 +147,7 @@ class _AlertHomePageState extends State<AlertHomePage> {
     await flutterLocalNotificationsPlugin.show(0, title, body, notificationDetails);
   }
 
+  // 標準通知 (一般提示音)
   Future<void> _showNormalNotification(String title, String body) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'general_alert_channel',
@@ -163,6 +171,7 @@ class _AlertHomePageState extends State<AlertHomePage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // 上層：網路重啟廣播區塊
             Card(
               color: Colors.red.shade50,
               elevation: 3,
@@ -191,6 +200,8 @@ class _AlertHomePageState extends State<AlertHomePage> {
               ),
             ),
             const SizedBox(height: 24),
+
+            // 下層：一般廣播區塊
             Card(
               color: Colors.purple.shade50,
               elevation: 2,
