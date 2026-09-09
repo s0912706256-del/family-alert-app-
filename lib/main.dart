@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -9,17 +10,15 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 初始化本地通知 Channel
   const AndroidInitializationSettings initializationSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
-  
+
   const InitializationSettings initializationSettings = InitializationSettings(
     android: initializationSettingsAndroid,
   );
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
-  // 建立 Android 高優先級警報頻道 (重要通知)
   const AndroidNotificationChannel urgentChannel = AndroidNotificationChannel(
     'urgent_alert_channel',
     '緊急警報通知',
@@ -28,7 +27,6 @@ void main() async {
     playSound: true,
   );
 
-  // 建立 Android 標準優先級頻道 (一般廣播)
   const AndroidNotificationChannel normalChannel = AndroidNotificationChannel(
     'general_alert_channel',
     '一般家庭廣播',
@@ -56,6 +54,7 @@ class FamilyAlertApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Family Alert',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
@@ -69,7 +68,7 @@ class AlertHomePage extends StatefulWidget {
   const AlertHomePage({super.key});
 
   @override
-  Widget state() => _AlertHomePageState();
+  State<AlertHomePage> createState() => _AlertHomePageState();
 }
 
 class _AlertHomePageState extends State<AlertHomePage> {
@@ -82,7 +81,6 @@ class _AlertHomePageState extends State<AlertHomePage> {
     _startUdpListener();
   }
 
-  // 啟動 UDP 監聽
   void _startUdpListener() async {
     try {
       _udpSocket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 8888);
@@ -101,10 +99,10 @@ class _AlertHomePageState extends State<AlertHomePage> {
     }
   }
 
-  // 解析收到訊息並觸發對應通知頻道
   void _handleIncomingBroadcast(String rawMessage) {
     bool isUrgent = rawMessage.startsWith("[URGENT]");
-    String cleanMessage = rawMessage.replaceAll("[URGENT]", "").replaceAll("[NORMAL]", "");
+    String cleanMessage =
+        rawMessage.replaceAll("[URGENT]", "").replaceAll("[NORMAL]", "");
 
     if (isUrgent) {
       _showUrgentNotification("⚠️ 緊急/重啟通知", cleanMessage);
@@ -113,150 +111,9 @@ class _AlertHomePageState extends State<AlertHomePage> {
     }
   }
 
-  // 發送 UDP 廣播封包
   void _sendUdpBroadcast(String message, {bool isUrgent = false}) async {
     try {
-      RawDatagramSocket socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      RawDatagramSocket socket =
+          await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
       socket.broadcastEnabled = true;
-      String payload = (isUrgent ? "[URGENT]" : "[NORMAL]") + message;
-      List<int> data = utf8.encode(payload);
-      socket.send(data, InternetAddress('255.255.255.255'), 8888);
-      socket.close();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isUrgent ? "已發送高優先級警報！" : "廣播已發送！")),
-        );
-      }
-    } catch (e) {
-      debugPrint("發送廣播失敗: $e");
-    }
-  }
-
-  // 高優先級通知 (懸浮彈窗 + 警報音效)
-  Future<void> _showUrgentNotification(String title, String body) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'urgent_alert_channel',
-      '緊急警報通知',
-      importance: Importance.max,
-      priority: Priority.high,
-      ticker: 'ticker',
-      fullScreenIntent: true,
-    );
-    const NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
-    await flutterLocalNotificationsPlugin.show(0, title, body, notificationDetails);
-  }
-
-  // 標準通知 (一般提示音)
-  Future<void> _showNormalNotification(String title, String body) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'general_alert_channel',
-      '一般家庭廣播',
-      importance: Importance.defaultNotification,
-      priority: Priority.defaultPriority,
-    );
-    const NotificationDetails notificationDetails = NotificationDetails(android: androidDetails);
-    await flutterLocalNotificationsPlugin.show(1, title, body, notificationDetails);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('🏠 家用私人通知控制台'),
-        centerTitle: true,
-        backgroundColor: Colors.purple.shade50,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // 上層：網路重啟廣播區塊
-            Card(
-              color: Colors.red.shade50,
-              elevation: 3,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    const Icon(Icons.wifi_off_rounded, size: 48, color: Colors.red),
-                    const SizedBox(height: 8),
-                    const Text('網路重啟廣播 (高優先級警報)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    const Text('對全家發送高優先級通知，強制懸浮彈窗與警報響鈴。', textAlign: TextAlign.center, style: TextStyle(color: Colors.black54)),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      icon: const Icon(Icons.warning_amber_rounded),
-                      label: const Text('發送 5 分鐘重啟預告'),
-                      onPressed: () => _sendUdpBroadcast("Deco Wi-Fi 將於 5 分鐘後重新啟動，請先儲存手頭工作！", isUrgent: true),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // 下層：一般廣播區塊
-            Card(
-              color: Colors.purple.shade50,
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.campaign, color: Colors.deepPurple),
-                        SizedBox(width: 8),
-                        Text('自訂家庭廣播 (標準通知)', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _msgController,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: '輸入訊息（例如：開飯囉！）',
-                        fillColor: Colors.white,
-                        filled: true,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      icon: const Icon(Icons.send),
-                      label: const Text('廣播至全家手機'),
-                      onPressed: () {
-                        if (_msgController.text.isNotEmpty) {
-                          _sendUdpBroadcast(_msgController.text, isUrgent: false);
-                          _msgController.clear();
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget dispose() {
-    _udpSocket?.close();
-    _msgController.dispose();
-    super.dispose();
-  }
-}
+      String payload = (isUrgent
