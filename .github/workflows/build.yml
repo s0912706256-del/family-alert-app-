@@ -22,13 +22,14 @@ jobs:
           flutter-version: '3.19.x'
           channel: 'stable'
 
-      - name: Rebuild Android Environment
+      - name: Create Clean Project
         run: |
+          mkdir -p ../backup_lib
+          cp -r lib/* ../backup_lib/
           rm -rf android
           flutter create --platforms=android --org com.example --project-name family_alert_app .
+          cp -r ../backup_lib/* lib/
           flutter pub get
-          sed -i 's/minSdkVersion .*/minSdkVersion 21/' android/app/build.gradle || true
-          sed -i 's/flutter.minSdkVersion/21/' android/app/build.gradle || true
 
       - name: Build APK
         run: flutter build apk --release
